@@ -1,0 +1,345 @@
+package com.magic.core.parser
+
+import com.alibaba.druid.DbType
+import com.alibaba.druid.sql.SQLUtils
+import com.alibaba.druid.sql.ast.SQLExpr
+import com.alibaba.druid.sql.ast.expr._
+import com.alibaba.druid.sql.ast.statement._
+import com.alibaba.druid.sql.dialect.hive.stmt.HiveCreateTableStatement
+import com.magic.core.utils.StringUtils
+import com.magic.sqllineageparser.model.{ColumnNode, TreeNode}
+
+import java.util
+import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.collection.mutable
+
+/**
+ * sql血缘解析入口函数
+ *
+ * @author Guan Peixiang
+ * @date 2023/12/19
+ */
+object SqlLineageParser {
+
+  /**
+   * 解析单个select sql
+   * 包括
+   * 1.select 类型
+   * 2.union  类型 todo
+   * @param sql
+   */
+  def parserSingleSelectSql(sql: String): TreeNode[ColumnNode]  = {
+    if (StringUtils.isEmpty(sql)) {
+      return null
+    }
+    // TODO
+    // SQLCreateTableStatement
+    // SQLAlterTableStatement
+//    val stmt2: SQLAlterTableStatement = SQLUtils.parseSingleStatement(sql, DbType.hive).asInstanceOf[SQLAlterTableStatement]
+//    val lst: mutable.Buffer[SQLAlterTableItem] = stmt2.getItems.asScala
+//    for (elem <- lst) {
+//      val ee = elem.asInstanceOf[SQLAlterTableAddColumn]
+//      println(ee)
+//      println(ee.getParent.asInstanceOf[SQLAlterTableStatement].getTableSource)
+//    }
+
+    val stmt: SQLSelectStatement = SQLUtils.parseSingleStatement(sql, DbType.hive).asInstanceOf[SQLSelectStatement]
+
+    val sqlSelectQuery: SQLSelectQuery = stmt.getSelect.getQuery
+    val root: TreeNode[ColumnNode] = new TreeNode[ColumnNode]
+
+    // select语句
+    sqlSelectQuery match {
+      case sqlSelectQuery: SQLSelectQueryBlock => {
+        parserSelectStmt(sqlSelectQuery, root)
+        println(root.getChildren.size())
+        return root
+      }
+      // union
+      case sqlSelectQuery: SQLUnionQuery => {
+        println(s"${sqlSelectQuery.getClass}类型不支持!!!")
+        return null
+      }
+      case _ => println(s"${sqlSelectQuery.getClass}类型不支持!!!")
+        return null
+
+    }
+  }
+
+  /**
+   * 解析select语句 非union
+   * @param sqlSelectQueryBlock
+   */
+  private def parserSelectStmt(sqlSelectQueryBlock: SQLSelectQueryBlock, root: TreeNode[ColumnNode]): Unit = {
+    println("解析 select sqlSelectQueryBlock")
+
+    val selectList: util.List[SQLSelectItem] = sqlSelectQueryBlock.getSelectList
+    println(s"select 语句大小：${selectList.size()}")
+    println(s"select 语句FROM ：${sqlSelectQueryBlock}")
+    println(sqlSelectQueryBlock.getFrom.toString)
+    for (item <- selectList.asScala) {
+      val expr: SQLExpr = item.getExpr
+      val exprString = item.getExpr.toString
+      val hint = item.getExpr.getHint
+      val alias: String = item.getAlias
+      val itemName: String = item.toString
+      val child = new TreeNode[ColumnNode]()
+      val node = new ColumnNode()
+      node.setName(itemName)
+      node.setAlias(alias)
+      child.setValue(node)
+      root.addChild(child)
+      val getColumn = if (StringUtils.isEmpty(alias)) itemName else alias
+      println(s"原字段: $itemName")
+      println(s"别名字段: $getColumn")
+      // 解析sql语句
+      parserSqlExpr(expr)
+    }
+
+    val table: SQLTableSource = sqlSelectQueryBlock.getFrom
+
+
+    // 普通单表
+    table match {
+      case tableSource: SQLExprTableSource =>
+      println("普通表：SQLExprTableSource")
+      // 处理最终表---------------------
+      //handlerSQLExprTableSource(node, table.asInstanceOf[SQLExprTableSource])
+      case tableSource: SQLJoinTableSource => // 处理join
+        println("join表：SQLJoinTableSource")
+        handlerSQLJoinTableSource(tableSource)
+      case tableSource: SQLSubqueryTableSource => // 处理 subquery ---------------------
+        println("子查询表：SQLSubqueryTableSource")
+      //handlerSQLSubqueryTableSource(node, table, `type`)
+      case tableSource: SQLUnionQueryTableSource => // 处理 union ---------------------
+        println("union表：SQLUnionQueryTableSource")
+      //handlerSQLUnionQueryTableSource(node, table.asInstanceOf[SQLUnionQueryTableSource], `type`)
+      case _ =>
+    }
+
+
+  }
+
+  /**
+   * 解析子节点sql
+   *
+   * @param sqlExpr
+   */
+  private def parserSqlExpr(sqlExpr: SQLExpr): Unit = {
+    sqlExpr match {
+
+      // case when
+      case expr: SQLCaseExpr =>
+        parserSQLCaseExpr(expr);
+
+      // 聚合
+      case expr: SQLAggregateExpr =>
+        parserSQLAggregateExpr(expr);
+
+      // 方法
+      case expr: SQLMethodInvokeExpr =>
+        parserSqlMethodInvokeExpr(expr);
+
+      // 比较
+      case expr: SQLBinaryOpExpr =>
+        parserSQLBinaryOpExpr(expr);
+
+      // 表达式
+      case expr: SQLPropertyExpr =>
+        parserSQLPropertyExpr(expr);
+
+      // 列
+      case expr: SQLIdentifierExpr =>
+        parserSqlIdentifierExpr(expr);
+
+      // 数字
+      case expr: SQLNumberExpr =>
+        parserSQLNumberExpr(expr);
+
+      // 赋值表达式
+      case expr: SQLIntegerExpr =>
+        parserSqlIntegerExpr(expr);
+
+      // 字符
+      case expr: SQLCharExpr =>
+        parseSqlCharExpr(expr);
+
+      // 其他未列出类型
+      case _ =>
+        println("！！！暂不支持未列出类型！！！")
+    }
+  }
+
+
+
+  /**
+   * 表达式
+   *
+   * select table.column from talbe_name table
+   *
+   * @param expr
+   */
+  private def parserSQLPropertyExpr(expr: SQLPropertyExpr): Unit = {
+    println("表达式 propertyExpr")
+    val name = expr.toString
+    println(name)
+    println(expr.getOwner)
+    println(expr.getName)
+    println("表达式 propertyExpr 解析完成！！！")
+  }
+
+
+  /**
+   * SQL CASE WHEN
+   *
+   * select case when then else end
+   * @param expr
+   */
+  private def parserSQLCaseExpr(expr: SQLCaseExpr): Unit = {
+    println("\n\n解析case when ....")
+    val lst: mutable.Buffer[SQLCaseExpr.Item] = expr.getItems.asScala
+    println(s"开始解析每个子条目...")
+    for (elem <- lst) {
+      println(s"item: $elem")
+      println(s"case条件：${elem.getConditionExpr}")
+      parserSqlExpr(elem.getValueExpr)
+    }
+    println(s"开始解析else语句...")
+    parserSqlExpr(expr.getElseExpr)
+    println("解析case 结束 !\n\n\n")
+  }
+
+  /**
+   * SQL Method
+   *
+   * select func(xxx) from table
+   * @param expr
+   */
+  private def parserSqlMethodInvokeExpr(expr: SQLMethodInvokeExpr): Unit = {
+    println("方法 visitSQLMethodInvoke")
+    val name = expr.getMethodName
+    expr.getArguments.asScala.foreach(argsExpr => {
+      println(argsExpr)
+      parserSqlExpr(argsExpr)
+    })
+    println(name)
+    println("方法 visitSQLMethodInvoke 解析完成！！！")
+  }
+
+  /**
+   * todo
+   *
+   *
+   * @param expr
+   */
+  private def parserSqlIdentifierExpr(expr: SQLIdentifierExpr): Unit = {
+    println("列 identifierExpr")
+    val name = expr.getName
+    println(name)
+    println("列 identifierExpr 解析完成！！！")
+
+
+  }
+
+  /**
+   * 整数 sql
+   *
+   * select 1 as col
+   * @param expr
+   */
+  private def parserSqlIntegerExpr(expr: SQLIntegerExpr): Unit = {
+    println("整数常量")
+    val name = expr.getNumber.toString
+    println(name)
+    println("整数常量 解析完成！！！")
+  }
+
+  /**
+   * 数字
+   * @param expr
+   */
+  private def parserSQLNumberExpr(expr: SQLNumberExpr): Unit = {
+    println(" 数字 numberExpr")
+    val name = expr.toString
+    println(name)
+    println("数字 numberExpr 解析完成！！！")
+  }
+
+  /**
+   * 字符 sql
+   *
+   * select '1' as col
+   * @param expr
+   */
+  private def parseSqlCharExpr(expr: SQLCharExpr): Unit = {
+    println("字符常量")
+    val name = expr.toString
+    println(name)
+    println("字符常量 解析完成！！！")
+  }
+
+
+  /**
+   * 比较类 sql
+   *
+   * select a>b
+   * @param expr
+   */
+  private def parserSQLBinaryOpExpr(expr: SQLBinaryOpExpr): Unit = {
+    println("比较 BinaryOp")
+    val name = expr.toString
+    println(name)
+    println(expr.getLeft)
+    parserSqlExpr(expr.getLeft)
+    println(expr.getOperator)
+    println(expr.getRight)
+    parserSqlExpr(expr.getRight)
+
+
+    println("比较 BinaryOp 解析完成！！！")
+  }
+
+
+
+  /**
+   * 聚合函数
+   *
+   * @param expr
+   */
+  private def parserSQLAggregateExpr(expr: SQLAggregateExpr): Unit = {
+    println("聚合aggregate")
+    val name = expr.toString
+    println(expr.computeDataType())
+    println(expr.getMethodName)
+    println()
+    expr.getArguments.forEach(x=> {parserSqlExpr(x)})
+
+    println("聚合aggregate 解析完成！！！")
+  }
+
+
+  /**
+   * sql join table source
+   * @param tableSource
+   */
+  private def handlerSQLJoinTableSource(tableSource: SQLJoinTableSource): Unit ={
+    println(tableSource.getJoinType)
+
+    println(tableSource)
+    println(tableSource.getFlashback)
+    println(tableSource.getAlias2)
+    println(tableSource.getLeft)
+    println(tableSource.getRight)
+    println(tableSource.getCondition)
+
+
+
+  }
+
+
+  private def handleItems(sqlExpr: SQLExpr){
+
+  }
+
+
+}

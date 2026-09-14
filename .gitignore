@@ -45,3 +45,4 @@ src/.DS_Store
 sqls/
 known-issues/
 docs/
+src/test

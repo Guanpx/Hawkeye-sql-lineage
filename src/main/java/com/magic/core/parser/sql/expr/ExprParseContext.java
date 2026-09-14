@@ -1,7 +1,7 @@
 package com.magic.core.parser.sql.expr;
 
 import com.alibaba.druid.sql.ast.statement.*;
-import com.magic.sqllineageparser.model.ColumnNode;
+import com.magic.core.model.ColumnNode;
 
 import java.util.ArrayList;
 import java.util.Collections;

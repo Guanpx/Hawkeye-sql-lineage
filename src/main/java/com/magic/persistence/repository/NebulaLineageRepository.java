@@ -4,8 +4,8 @@ import com.magic.persistence.config.GraphDbConfig;
 import com.magic.persistence.entity.LineageEdge;
 import com.magic.persistence.entity.LineageGraph;
 import com.magic.persistence.entity.LineageNode;
-import com.magic.sqllineageparser.model.ColumnNode;
-import com.magic.sqllineageparser.model.DmlLineageInfo;
+import com.magic.core.model.ColumnNode;
+import com.magic.core.model.DmlLineageInfo;
 
 import java.util.Collections;
 import java.util.List;

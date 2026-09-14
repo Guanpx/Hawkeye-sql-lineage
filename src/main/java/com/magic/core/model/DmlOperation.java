@@ -1,4 +1,4 @@
-package com.magic.sqllineageparser.model;
+package com.magic.core.model;
 
 /**
  * DML 操作类型

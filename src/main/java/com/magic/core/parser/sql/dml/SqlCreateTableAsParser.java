@@ -6,8 +6,8 @@ import com.alibaba.druid.sql.ast.statement.SQLExprTableSource;
 import com.alibaba.druid.sql.ast.statement.SQLTableElement;
 import com.magic.core.parser.SqlLineageParser;
 import com.magic.core.utils.StringUtils;
-import com.magic.sqllineageparser.model.DmlLineageInfo;
-import com.magic.sqllineageparser.model.DmlOperation;
+import com.magic.core.model.DmlLineageInfo;
+import com.magic.core.model.DmlOperation;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;

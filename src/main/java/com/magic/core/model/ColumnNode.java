@@ -1,4 +1,4 @@
-package com.magic.sqllineageparser.model;
+package com.magic.core.model;
 
 import lombok.Getter;
 import lombok.Setter;

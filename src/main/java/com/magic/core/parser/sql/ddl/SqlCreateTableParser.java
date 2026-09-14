@@ -6,8 +6,8 @@ import com.alibaba.druid.sql.ast.statement.SQLColumnDefinition;
 import com.alibaba.druid.sql.ast.statement.SQLCreateTableStatement;
 import com.alibaba.druid.sql.ast.statement.SQLExprTableSource;
 import com.magic.core.utils.StringUtils;
-import com.magic.sqllineageparser.model.CreateTableInfo;
-import com.magic.sqllineageparser.model.TableColumnMeta;
+import com.magic.core.model.CreateTableInfo;
+import com.magic.core.model.TableColumnMeta;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;

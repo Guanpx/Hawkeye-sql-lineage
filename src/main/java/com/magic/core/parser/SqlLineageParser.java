@@ -19,10 +19,10 @@ import com.magic.core.parser.sql.dml.SqlInsertParser;
 import com.magic.core.parser.sql.expr.BaseSqlExprParser;
 import com.magic.core.parser.sql.expr.ExprParseContext;
 import com.magic.core.utils.StringUtils;
-import com.magic.sqllineageparser.model.AlterTableInfo;
-import com.magic.sqllineageparser.model.CreateTableInfo;
-import com.magic.sqllineageparser.model.ColumnNode;
-import com.magic.sqllineageparser.model.DmlLineageInfo;
+import com.magic.core.model.AlterTableInfo;
+import com.magic.core.model.CreateTableInfo;
+import com.magic.core.model.ColumnNode;
+import com.magic.core.model.DmlLineageInfo;
 
 import java.util.ArrayList;
 import java.util.Collections;

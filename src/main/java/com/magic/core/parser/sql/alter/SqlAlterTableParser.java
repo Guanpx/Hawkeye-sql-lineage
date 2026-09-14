@@ -12,8 +12,8 @@ import com.alibaba.druid.sql.ast.statement.SQLAlterTableStatement;
 import com.alibaba.druid.sql.ast.statement.SQLColumnDefinition;
 import com.alibaba.druid.sql.ast.statement.SQLExprTableSource;
 import com.magic.core.utils.StringUtils;
-import com.magic.sqllineageparser.model.AlterColumnChange;
-import com.magic.sqllineageparser.model.AlterTableInfo;
+import com.magic.core.model.AlterColumnChange;
+import com.magic.core.model.AlterTableInfo;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
